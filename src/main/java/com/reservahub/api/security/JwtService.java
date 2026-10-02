@@ -10,6 +10,8 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Configuration
 public class JwtService {
@@ -19,6 +21,8 @@ public class JwtService {
 
     @Value("${jwt.expiracao-minutos}")
     private Long expiracaoMinutos;
+
+    private final Map<String, Date> tokensRevogados = new ConcurrentHashMap<>();
 
     @Bean
     public SecretKey jwtKey() {
@@ -42,5 +46,56 @@ public class JwtService {
                 .expiration(expiraEm)
                 .signWith(jwtKey())
                 .compact();
+    }
+
+    public String extrairEmail(String token) {
+        return Jwts.parser()
+                .verifyWith(jwtKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
+    }
+
+    public boolean validarToken(String token) {
+        try {
+            removerTokensExpirados();
+
+            if (tokensRevogados.containsKey(token)) {
+                return false;
+            }
+
+            Jwts.parser()
+                    .verifyWith(jwtKey())
+                    .build()
+                    .parseSignedClaims(token);
+
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void revogarToken(String token) {
+        try {
+            Date expiracao = Jwts.parser()
+                    .verifyWith(jwtKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload()
+                    .getExpiration();
+
+            tokensRevogados.put(token, expiracao);
+        } catch (Exception e) {
+            tokensRevogados.put(token, new Date());
+        }
+    }
+
+    private void removerTokensExpirados() {
+        Date agora = new Date();
+
+        tokensRevogados.entrySet().removeIf(
+                entry -> entry.getValue().before(agora)
+        );
     }
 }

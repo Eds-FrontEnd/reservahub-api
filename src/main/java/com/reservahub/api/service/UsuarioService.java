@@ -3,33 +3,52 @@ package com.reservahub.api.service;
 import com.reservahub.api.dto.UsuarioCadastro;
 import com.reservahub.api.model.Usuario;
 import com.reservahub.api.repository.UsuarioRepository;
+import com.reservahub.api.security.UsuarioAutenticado;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class UsuarioService {
+public class UsuarioService implements UserDetailsService {
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
-            PasswordEncoder passwordEncoder
-    ) {
+            PasswordEncoder passwordEncoder) {
+
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
-    public void cadastrar(UsuarioCadastro usuarioCadastro) {
+    public Usuario cadastrar(UsuarioCadastro usuarioCadastro) {
+
         if (usuarioRepository.existsByEmail(usuarioCadastro.email())) {
-            throw new IllegalArgumentException("E-mail já cadastrado");
+            throw new IllegalArgumentException("E-mail já cadastrado.");
         }
 
-        Usuario usuario = new Usuario();
-        usuario.setNome(usuarioCadastro.nome());
-        usuario.setEmail(usuarioCadastro.email());
-        usuario.setSenha(passwordEncoder.encode(usuarioCadastro.senha()));
+        Usuario usuario = new Usuario(
+                usuarioCadastro.nome(),
+                usuarioCadastro.email(),
+                passwordEncoder.encode(usuarioCadastro.senha())
+        );
 
-        usuarioRepository.save(usuario);
+        return usuarioRepository.save(usuario);
+    }
+
+    @Override
+    public UsuarioAutenticado loadUserByUsername(String email)
+            throws UsernameNotFoundException {
+
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new UsernameNotFoundException(
+                                "Usuário não encontrado."
+                        )
+                );
+
+        return new UsuarioAutenticado(usuario);
     }
 }

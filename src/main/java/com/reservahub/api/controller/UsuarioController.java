@@ -1,3 +1,4 @@
+
 package com.reservahub.api.controller;
 
 import com.reservahub.api.dto.UsuarioCadastro;
@@ -21,10 +22,14 @@ public class UsuarioController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> cadastrar(
-            @RequestBody @Valid UsuarioCadastro usuarioCadastro
-    ) {
+    public ResponseEntity<String> cadastrar(
+            @Valid @RequestBody UsuarioCadastro usuarioCadastro) {
+
         usuarioService.cadastrar(usuarioCadastro);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body("{\"message\":\"Usuário cadastrado com sucesso.\"}");
     }
 }
+
