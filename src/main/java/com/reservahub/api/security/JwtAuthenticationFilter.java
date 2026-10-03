@@ -37,6 +37,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String cabecalhoAuth = request.getHeader("Authorization");
 
         if (cabecalhoAuth == null || !cabecalhoAuth.startsWith("Bearer ")) {
