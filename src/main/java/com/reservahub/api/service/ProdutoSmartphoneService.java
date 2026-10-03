@@ -75,6 +75,7 @@ public class ProdutoSmartphoneService {
                 produto.getNomeProduto(),
                 produto.getStock(),
                 produto.getModelo(),
+                produto.getDescription(),
                 produto.getUrlImagem(),
                 produto.getPlano().getIdPlano(),
                 obterNomePlano(produto.getPlano().getTipoPlano()),

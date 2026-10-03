@@ -39,6 +39,13 @@ public class Produto {
     private Integer stock;
 
     @Column(
+            name = "description",
+            nullable = false,
+            columnDefinition = "TEXT"
+    )
+    private String description;
+
+    @Column(
             name = "modelo",
             nullable = false,
             length = 100
@@ -99,6 +106,14 @@ public class Produto {
 
     public void setStock(Integer stock) {
         this.stock = stock;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public String getModelo() {

@@ -7,6 +7,7 @@ public record ProdutoSmartphone(
         String nome,
         Integer stock,
         String modelo_produto,
+        String description,
         String image_url,
         String id_plano,
         String plano,
