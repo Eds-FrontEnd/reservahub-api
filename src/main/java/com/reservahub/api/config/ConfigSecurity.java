@@ -115,6 +115,11 @@ public class ConfigSecurity {
                                 "/api/smartphones"
                         ).permitAll()
 
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/contato"
+                        ).permitAll()
+
                         .anyRequest().authenticated()
                 )
 
