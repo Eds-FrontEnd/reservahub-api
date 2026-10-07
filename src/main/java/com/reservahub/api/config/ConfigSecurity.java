@@ -120,6 +120,11 @@ public class ConfigSecurity {
                                 "/api/contato"
                         ).permitAll()
 
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/smartphones/buscar"
+                        ).permitAll()
+
                         .anyRequest().authenticated()
                 )
 
