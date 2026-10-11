@@ -125,6 +125,11 @@ public class ConfigSecurity {
                                 "/api/smartphones/buscar"
                         ).permitAll()
 
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/solicitacao-reset-senha"
+                        ).permitAll()
+
                         .anyRequest().authenticated()
                 )
 

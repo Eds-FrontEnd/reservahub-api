@@ -24,42 +24,45 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     public JwtAuthenticationFilter(
             JwtService jwtService,
-            UsuarioRepository usuarioRepository) {
-
+            UsuarioRepository usuarioRepository
+    ) {
         this.jwtService = jwtService;
         this.usuarioRepository = usuarioRepository;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String caminho = request.getServletPath();
+        String metodo = request.getMethod();
+
+        return "OPTIONS".equalsIgnoreCase(metodo)
+                || ("POST".equalsIgnoreCase(metodo)
+                && (
+                "/api/auth/solicitacao-reset-senha".equals(caminho)
+                        || "/api/auth/login".equals(caminho)
+        ))
+                || ("POST".equalsIgnoreCase(metodo)
+                && "/api/usuarios".equals(caminho));
     }
 
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
-            FilterChain filterChain)
-            throws ServletException, IOException {
-
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
         String cabecalhoAuth = request.getHeader("Authorization");
 
-        if (cabecalhoAuth == null || !cabecalhoAuth.startsWith("Bearer ")) {
+        if (cabecalhoAuth == null
+                || !cabecalhoAuth.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = cabecalhoAuth.substring(7).trim();
 
-        if (token.isEmpty()) {
-            response.sendError(
-                    HttpServletResponse.SC_UNAUTHORIZED,
-                    "Token JWT não informado."
-            );
-            return;
-        }
-
-        if (!jwtService.validarToken(token)) {
+        if (token.isEmpty() || !jwtService.validarToken(token)) {
             response.sendError(
                     HttpServletResponse.SC_UNAUTHORIZED,
                     "Token JWT inválido ou expirado."
@@ -86,9 +89,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 new UsernamePasswordAuthenticationToken(
                         usuario,
                         null,
-                        List.of(
-                                new SimpleGrantedAuthority("ROLE_USER")
-                        )
+                        List.of(new SimpleGrantedAuthority("ROLE_USER"))
                 );
 
         SecurityContextHolder.getContext()
