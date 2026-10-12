@@ -1,4 +1,6 @@
 package com.reservahub.api.dto;
 
-public record SolicitacaoResetSenhaResponse(String mensagem) {
+public record SolicitacaoResetSenhaResponse(
+        String mensagem
+) {
 }

@@ -1,3 +1,4 @@
+
 package com.reservahub.api.model;
 
 import jakarta.persistence.Column;
@@ -12,9 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-
-import java.time.Instant;
-import java.util.Objects;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "solicitacao_reset_senha", schema = "public")
@@ -29,57 +28,48 @@ public class SolicitacaoResetSenha {
     private Usuario usuario;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(nullable = false, length = 20)
     private StatusSolicitacaoResetSenha status =
             StatusSolicitacaoResetSenha.PENDENTE;
 
-    @Column(name = "criado_em", nullable = false)
-    private Instant criadoEm;
+    @Column(name = "criado_em", nullable = false, updatable = false)
+    private LocalDateTime criadoEm;
 
     @Column(name = "resolvido_em")
-    private Instant resolvidoEm;
+    private LocalDateTime resolvidoEm;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "administrador_id")
     private Usuario administrador;
 
+    @Column(name = "codigo_hash", length = 100)
+    private String codigoHash;
+
+    @Column(name = "codigo_expira_em")
+    private LocalDateTime codigoExpiraEm;
+
+    @Column(name = "codigo_utilizado_em")
+    private LocalDateTime codigoUtilizadoEm;
+
     protected SolicitacaoResetSenha() {
     }
 
     public SolicitacaoResetSenha(Usuario usuario) {
-        this.usuario = Objects.requireNonNull(usuario);
+        if (usuario == null) {
+            throw new IllegalArgumentException(
+                    "O usuário é obrigatório."
+            );
+        }
+
+        this.usuario = usuario;
         this.status = StatusSolicitacaoResetSenha.PENDENTE;
     }
 
     @PrePersist
     protected void prePersist() {
         if (criadoEm == null) {
-            criadoEm = Instant.now();
+            criadoEm = LocalDateTime.now();
         }
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public Usuario getUsuario() {
-        return usuario;
-    }
-
-    public StatusSolicitacaoResetSenha getStatus() {
-        return status;
-    }
-
-    public Instant getCriadoEm() {
-        return criadoEm;
-    }
-
-    public Instant getResolvidoEm() {
-        return resolvidoEm;
-    }
-
-    public Usuario getAdministrador() {
-        return administrador;
     }
 
     public void resolver(
@@ -93,15 +83,72 @@ public class SolicitacaoResetSenha {
         }
 
         if (novoStatus != StatusSolicitacaoResetSenha.APROVADA
-                && novoStatus != StatusSolicitacaoResetSenha.RECUSADA
-                && novoStatus != StatusSolicitacaoResetSenha.CANCELADA) {
+                && novoStatus != StatusSolicitacaoResetSenha.REJEITADA) {
             throw new IllegalArgumentException(
                     "Status de resolução inválido."
             );
         }
 
+        if (administrador == null) {
+            throw new IllegalArgumentException(
+                    "O administrador é obrigatório."
+            );
+        }
+
         this.status = novoStatus;
-        this.administrador = Objects.requireNonNull(administrador);
-        this.resolvidoEm = Instant.now();
+        this.administrador = administrador;
+        this.resolvidoEm = LocalDateTime.now();
+    }
+
+    public boolean podeRedefinirSenha() {
+        return status == StatusSolicitacaoResetSenha.APROVADA
+                && codigoUtilizadoEm == null;
+    }
+
+    public void marcarSolicitacaoComoUtilizada() {
+    if (status != StatusSolicitacaoResetSenha.APROVADA) {
+        throw new IllegalStateException(
+                "A solicitação não está aprovada para redefinição."
+        );
+    }
+
+    if (codigoUtilizadoEm != null) {
+        throw new IllegalStateException(
+                "A solicitação já foi utilizada."
+        );
+    }
+
+    this.status = StatusSolicitacaoResetSenha.FINALIZADA;
+    this.codigoUtilizadoEm = LocalDateTime.now();
+    this.codigoHash = null;
+    this.codigoExpiraEm = null;
+}
+
+    public Long getId() {
+        return id;
+    }
+
+    public Usuario getUsuario() {
+        return usuario;
+    }
+
+    public StatusSolicitacaoResetSenha getStatus() {
+        return status;
+    }
+
+    public LocalDateTime getCriadoEm() {
+        return criadoEm;
+    }
+
+    public LocalDateTime getResolvidoEm() {
+        return resolvidoEm;
+    }
+
+    public Usuario getAdministrador() {
+        return administrador;
+    }
+
+    public String getCodigoHash() {
+        return codigoHash;
     }
 }

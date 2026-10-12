@@ -1,6 +1,8 @@
+
 package com.reservahub.api.config;
 
 import com.reservahub.api.security.JwtAuthenticationFilter;
+import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,8 +17,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
 
 @Configuration
 public class ConfigSecurity {
@@ -51,7 +51,14 @@ public class ConfigSecurity {
         );
 
         configuration.setAllowedMethods(
-                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "DELETE",
+                        "OPTIONS"
+                )
         );
 
         configuration.setAllowedHeaders(List.of("*"));
@@ -66,55 +73,59 @@ public class ConfigSecurity {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
-
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http
+    ) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-
                 .cors(cors ->
                         cors.configurationSource(corsConfigurationSource())
                 )
-
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
                         )
                 )
-
                 .authorizeHttpRequests(auth -> auth
-
-                        .requestMatchers(
-                                HttpMethod.OPTIONS,
-                                "/**"
-                        ).permitAll()
-
-                        .requestMatchers(
-                                "/api/admin/**"
-                        ).hasRole("ADMIN")
-
+                        .requestMatchers(HttpMethod.OPTIONS, "/**")
+                        .permitAll()
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("ADMIN")
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/auth/login",
                                 "/api/auth/cadastro",
-                                "/api/auth/solicitacao-reset-senha",
+                                "/api/auth/solicitar-reset-senha",
                                 "/api/usuarios",
                                 "/api/contato"
-                        ).permitAll()
-
+                        )
+                        .permitAll()
+                        .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/auth/redefinir-senha"
+                        )
+                        .permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/auth/solicitacao-reset-senha/*/eventos"
+                        )
+                        .permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/auth/solicitacao-reset-senha/**"
+                        )
+                        .permitAll()
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/smartphones",
                                 "/api/smartphones/buscar"
-                        ).permitAll()
-
-                        .anyRequest().authenticated()
+                        )
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated()
                 )
-
                 .httpBasic(httpBasic -> httpBasic.disable())
-
                 .formLogin(formLogin -> formLogin.disable())
-
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
