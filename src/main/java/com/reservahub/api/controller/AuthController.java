@@ -51,7 +51,8 @@ public class AuthController {
 
         LoginResposta resposta = new LoginResposta(
                 token,
-                usuario.getNome()
+                usuario.getNome(),
+                usuario.getPerfil()
         );
 
         return ResponseEntity
@@ -74,13 +75,14 @@ public class AuthController {
         UsuarioAutenticado usuarioAutenticado =
                 (UsuarioAutenticado) authentication.getPrincipal();
 
-        String token = jwtService.gerarToken(
-                usuarioAutenticado.getUsuario()
-        );
+        Usuario usuario = usuarioAutenticado.getUsuario();
+
+        String token = jwtService.gerarToken(usuario);
 
         LoginResposta resposta = new LoginResposta(
                 token,
-                usuarioAutenticado.getUsuario().getNome()
+                usuario.getNome(),
+                usuario.getPerfil()
         );
 
         return ResponseEntity.ok(resposta);

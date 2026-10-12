@@ -84,12 +84,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         Usuario usuario = usuarioOptional.get();
+        String perfil = usuario.getPerfil();
+
+        if (!"USER".equals(perfil) && !"ADMIN".equals(perfil)) {
+            response.sendError(
+                    HttpServletResponse.SC_FORBIDDEN,
+                    "Perfil de usuário inválido."
+            );
+            return;
+        }
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
                         usuario,
                         null,
-                        List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                        List.of(
+                                new SimpleGrantedAuthority("ROLE_" + perfil)
+                        )
                 );
 
         SecurityContextHolder.getContext()

@@ -24,6 +24,9 @@ public class Usuario {
     @Column(nullable = false)
     private String senha;
 
+    @Column(nullable = false, length = 20)
+    private String perfil = "USER";
+
     public Usuario() {
     }
 
@@ -31,6 +34,7 @@ public class Usuario {
         this.nome = nome;
         this.email = email;
         this.senha = senha;
+        this.perfil = "USER";
     }
 
     public Long getId() {
@@ -49,6 +53,10 @@ public class Usuario {
         return senha;
     }
 
+    public String getPerfil() {
+        return perfil;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -63,5 +71,9 @@ public class Usuario {
 
     public void setSenha(String senha) {
         this.senha = senha;
+    }
+
+    public void setPerfil(String perfil) {
+        this.perfil = perfil;
     }
 }

@@ -34,8 +34,8 @@ public class ConfigSecurity {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration) throws Exception {
-
+            AuthenticationConfiguration configuration
+    ) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
@@ -44,33 +44,23 @@ public class ConfigSecurity {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
-                List.of("http://localhost:5173")
-        );
-
-        configuration.setAllowedMethods(
                 List.of(
-                        "GET",
-                        "POST",
-                        "PUT",
-                        "PATCH",
-                        "DELETE",
-                        "OPTIONS"
+                        "http://localhost:5173",
+                        "http://localhost:5174"
                 )
         );
 
-        configuration.setAllowedHeaders(
-                List.of("*")
+        configuration.setAllowedMethods(
+                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         );
 
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration(
-                "/**",
-                configuration
-        );
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }
@@ -83,9 +73,7 @@ public class ConfigSecurity {
                 .csrf(csrf -> csrf.disable())
 
                 .cors(cors ->
-                        cors.configurationSource(
-                                corsConfigurationSource()
-                        )
+                        cors.configurationSource(corsConfigurationSource())
                 )
 
                 .sessionManagement(session ->
@@ -102,44 +90,30 @@ public class ConfigSecurity {
                         ).permitAll()
 
                         .requestMatchers(
-                                "/api/auth/**"
-                        ).permitAll()
+                                "/api/admin/**"
+                        ).hasRole("ADMIN")
 
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/api/usuarios"
-                        ).permitAll()
-
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/smartphones"
-                        ).permitAll()
-
-                        .requestMatchers(
-                                HttpMethod.POST,
+                                "/api/auth/login",
+                                "/api/auth/cadastro",
+                                "/api/auth/solicitacao-reset-senha",
+                                "/api/usuarios",
                                 "/api/contato"
                         ).permitAll()
 
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/api/smartphones",
                                 "/api/smartphones/buscar"
-                        ).permitAll()
-
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/auth/solicitacao-reset-senha"
                         ).permitAll()
 
                         .anyRequest().authenticated()
                 )
 
-                .httpBasic(httpBasic ->
-                        httpBasic.disable()
-                )
+                .httpBasic(httpBasic -> httpBasic.disable())
 
-                .formLogin(formLogin ->
-                        formLogin.disable()
-                )
+                .formLogin(formLogin -> formLogin.disable())
 
                 .addFilterBefore(
                         jwtAuthenticationFilter,
