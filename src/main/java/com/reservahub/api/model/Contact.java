@@ -3,7 +3,7 @@ package com.reservahub.api.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "contacts")
+@Table(name = "contato")
 public class Contact {
 
     @Id
