@@ -35,6 +35,12 @@ public class UsuarioService implements UserDetailsService {
                 passwordEncoder.encode(usuarioCadastro.senha())
         );
 
+        usuario.setCep(usuarioCadastro.cep());
+        usuario.setRua(usuarioCadastro.street());
+        usuario.setBairro(usuarioCadastro.neighborhood());
+        usuario.setCidade(usuarioCadastro.city());
+        usuario.setUf(usuarioCadastro.state());
+
         return usuarioRepository.save(usuario);
     }
 

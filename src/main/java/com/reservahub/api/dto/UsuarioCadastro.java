@@ -1,4 +1,4 @@
-package com.reservahub.api.dto;
+ package com.reservahub.api.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -13,7 +13,17 @@ public record UsuarioCadastro(
         String email,
 
         @NotBlank
-        String senha
+        String senha,
+
+        String cep,
+
+        String street,
+
+        String neighborhood,
+
+        String city,
+
+        String state
 
 ) {
 }

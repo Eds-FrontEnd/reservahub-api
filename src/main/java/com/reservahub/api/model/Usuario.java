@@ -27,6 +27,21 @@ public class Usuario {
     @Column(nullable = false, length = 20)
     private String perfil = "USER";
 
+    @Column(length = 9)
+    private String cep;
+
+    @Column(name = "rua", length = 255)
+    private String rua;
+
+    @Column(length = 100)
+    private String bairro;
+
+    @Column(length = 150)
+    private String cidade;
+
+    @Column(length = 2)
+    private String uf;
+
     public Usuario() {
     }
 
@@ -57,6 +72,26 @@ public class Usuario {
         return perfil;
     }
 
+    public String getCep() {
+        return cep;
+    }
+
+    public String getRua() {
+        return rua;
+    }
+
+    public String getBairro() {
+        return bairro;
+    }
+
+    public String getCidade() {
+        return cidade;
+    }
+
+    public String getUf() {
+        return uf;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -75,5 +110,25 @@ public class Usuario {
 
     public void setPerfil(String perfil) {
         this.perfil = perfil;
+    }
+
+    public void setCep(String cep) {
+        this.cep = cep;
+    }
+
+    public void setRua(String rua) {
+        this.rua = rua;
+    }
+
+    public void setBairro(String bairro) {
+        this.bairro = bairro;
+    }
+
+    public void setCidade(String cidade) {
+        this.cidade = cidade;
+    }
+
+    public void setUf(String uf) {
+        this.uf = uf;
     }
 }
