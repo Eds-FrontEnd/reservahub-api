@@ -1,4 +1,3 @@
-
 package com.reservahub.api.config;
 
 import com.reservahub.api.security.JwtAuthenticationFilter;
@@ -119,6 +118,11 @@ public class ConfigSecurity {
                                 HttpMethod.GET,
                                 "/api/smartphones",
                                 "/api/smartphones/buscar"
+                        )
+                        .permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/smartphones/estoque/eventos"
                         )
                         .permitAll()
                         .anyRequest()

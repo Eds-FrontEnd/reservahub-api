@@ -12,7 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "assinatura")
+@Table(name = "assinatura", schema = "public")
 public class Assinatura {
 
     @Id
@@ -20,39 +20,23 @@ public class Assinatura {
     @Column(name = "id_detalhe")
     private Long idDetalhe;
 
-    @Column(
-            name = "quantidade",
-            nullable = false
-    )
+    @Column(name = "quantidade", nullable = false)
     private Integer quantidade;
 
-    /*
-     * Muitas assinaturas podem fazer referência
-     * ao mesmo produto.
-     *
-     * assinatura.id_produto -> produto.id_produto
-     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "id_produto",
-            nullable = false
-    )
+    @JoinColumn(name = "id_produto", nullable = false)
     @JsonIgnore
     private Produto produto;
 
-    /*
-     * Muitas assinaturas podem fazer referência
-     * ao mesmo plano.
-     *
-     * assinatura.id_plano -> plano_assinatura.id_plano
-     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "id_plano",
-            nullable = false
-    )
+    @JoinColumn(name = "id_plano", nullable = false)
     @JsonIgnore
     private Plano plano;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_usuario", nullable = false)
+    @JsonIgnore
+    private Usuario usuario;
 
     public Assinatura() {
     }
@@ -87,5 +71,13 @@ public class Assinatura {
 
     public void setPlano(Plano plano) {
         this.plano = plano;
+    }
+
+    public Usuario getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(Usuario usuario) {
+        this.usuario = usuario;
     }
 }

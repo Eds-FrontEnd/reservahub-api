@@ -1,3 +1,4 @@
+
 package com.reservahub.api.security;
 
 import com.reservahub.api.model.Usuario;
@@ -75,8 +76,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String email = jwtService.extrairEmail(token);
 
+        if (email == null || email.isBlank()) {
+            response.sendError(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "O token JWT não contém um e-mail válido."
+            );
+            return;
+        }
+
         Optional<Usuario> usuarioOptional =
-                usuarioRepository.findByEmail(email);
+                usuarioRepository.findByEmail(email.trim());
 
         if (usuarioOptional.isEmpty()) {
             response.sendError(
@@ -99,7 +108,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
-                        usuario,
+                        usuario.getEmail(),
                         null,
                         List.of(
                                 new SimpleGrantedAuthority("ROLE_" + perfil)
