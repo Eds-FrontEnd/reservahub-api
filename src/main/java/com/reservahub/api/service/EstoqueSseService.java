@@ -18,10 +18,12 @@ public class EstoqueSseService {
         conexoes.add(emitter);
 
         emitter.onCompletion(() -> conexoes.remove(emitter));
+
         emitter.onTimeout(() -> {
             conexoes.remove(emitter);
             emitter.complete();
         });
+
         emitter.onError(erro -> conexoes.remove(emitter));
 
         return emitter;
@@ -32,12 +34,21 @@ public class EstoqueSseService {
             return;
         }
 
+        List<String> idsUnicos = idsProdutos.stream()
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+
+        if (idsUnicos.isEmpty()) {
+            return;
+        }
+
         for (SseEmitter emitter : conexoes) {
             try {
                 emitter.send(
                         SseEmitter.event()
                                 .name("estoque-atualizado")
-                                .data(idsProdutos)
+                                .data(idsUnicos)
                 );
             } catch (IOException | IllegalStateException erro) {
                 conexoes.remove(emitter);

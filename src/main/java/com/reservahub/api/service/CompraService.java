@@ -19,13 +19,20 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class CompraService {
 
     private static final int MAX_ITENS_POR_COMPRA = 50;
+
+    private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2);
 
     private static final Map<Integer, String> PLANOS_POR_PRAZO = Map.of(
             1, "plano-mensal",
@@ -68,33 +75,45 @@ public class CompraService {
 
         String emailNormalizado = emailAutenticado.trim();
 
-        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(emailNormalizado)
+        Usuario usuario = usuarioRepository
+                .findByEmailIgnoreCase(emailNormalizado)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED,
                         "Usuário autenticado não encontrado."
                 ));
 
+        String cupomAplicado = normalizarCupom(request.cupomDesconto());
+
+        validarReutilizacaoCupom(usuario, cupomAplicado);
+
         List<ItemCompraRequest> itens = request.items();
 
-        for (ItemCompraRequest item : itens) {
-            registrarItem(item, usuario);
+        List<LinhaCompra> linhas = calcularValores(
+                itens,
+                cupomAplicado
+        );
+
+        Set<String> idsProdutosAtualizados = new LinkedHashSet<>();
+
+        for (LinhaCompra linha : linhas) {
+            String idProdutoAtualizado = registrarItem(linha, usuario);
+            idsProdutosAtualizados.add(idProdutoAtualizado);
         }
 
-        List<String> idsProdutosAtualizados = itens.stream()
-                .map(ItemCompraRequest::productId)
-                .distinct()
-                .toList();
+        if (!idsProdutosAtualizados.isEmpty()) {
+            List<String> idsParaNotificar = List.copyOf(idsProdutosAtualizados);
 
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        estoqueSseService.notificarEstoqueAtualizado(
-                                idsProdutosAtualizados
-                        );
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            estoqueSseService.notificarEstoqueAtualizado(
+                                    idsParaNotificar
+                            );
+                        }
                     }
-                }
-        );
+            );
+        }
 
         int totalItens = itens.stream()
                 .mapToInt(ItemCompraRequest::quantity)
@@ -139,10 +158,128 @@ public class CompraService {
         }
     }
 
-    private void registrarItem(
-            ItemCompraRequest item,
+    private void validarReutilizacaoCupom(
+            Usuario usuario,
+            String cupomDesconto
+    ) {
+        if (cupomDesconto == null) {
+            return;
+        }
+
+        if (assinaturaRepository.existsByUsuarioAndCupomDescontoIgnoreCase(
+                usuario,
+                cupomDesconto
+        )) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Este cupom já foi utilizado na sua conta."
+            );
+        }
+    }
+
+    private List<LinhaCompra> calcularValores(
+            List<ItemCompraRequest> itens,
+            String cupomDesconto
+    ) {
+        List<LinhaCompra> linhas = new ArrayList<>();
+        BigDecimal valorOriginalTotal = ZERO;
+        int percentualDesconto = obterPercentualDesconto(cupomDesconto);
+
+        for (ItemCompraRequest item : itens) {
+            String idPlano = PLANOS_POR_PRAZO.get(item.planMonths());
+
+            Plano plano = planoRepository.findById(idPlano)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.CONFLICT,
+                            "O plano selecionado não está cadastrado."
+                    ));
+
+            BigDecimal valorOriginal = plano.getMonthlyPrice()
+                    .multiply(BigDecimal.valueOf(item.quantity()))
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            valorOriginalTotal = valorOriginalTotal.add(valorOriginal);
+
+            linhas.add(new LinhaCompra(
+                    item,
+                    valorOriginal,
+                    ZERO,
+                    valorOriginal,
+                    cupomDesconto
+            ));
+        }
+
+        BigDecimal valorDescontoTotal = valorOriginalTotal
+                .multiply(BigDecimal.valueOf(percentualDesconto))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+        BigDecimal descontoRestante = valorDescontoTotal;
+
+        for (int i = 0; i < linhas.size(); i++) {
+            LinhaCompra linha = linhas.get(i);
+            BigDecimal valorDesconto;
+
+            if (i == linhas.size() - 1) {
+                valorDesconto = descontoRestante;
+            } else if (valorOriginalTotal.signum() > 0) {
+                valorDesconto = linha.valorOriginal()
+                        .multiply(valorDescontoTotal)
+                        .divide(valorOriginalTotal, 2, RoundingMode.HALF_UP)
+                        .min(descontoRestante)
+                        .max(ZERO);
+            } else {
+                valorDesconto = ZERO;
+            }
+
+            BigDecimal valorTotal = linha.valorOriginal()
+                    .subtract(valorDesconto)
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            linhas.set(i, new LinhaCompra(
+                    linha.item(),
+                    linha.valorOriginal(),
+                    valorDesconto,
+                    valorTotal,
+                    linha.cupomDesconto()
+            ));
+
+            descontoRestante = descontoRestante.subtract(valorDesconto);
+        }
+
+        return linhas;
+    }
+
+    private String normalizarCupom(String cupomDesconto) {
+        if (cupomDesconto == null || cupomDesconto.isBlank()) {
+            return null;
+        }
+
+        return cupomDesconto.trim().toUpperCase();
+    }
+
+    private int obterPercentualDesconto(String cupomDesconto) {
+        if (cupomDesconto == null) {
+            return 0;
+        }
+
+        if (!cupomDesconto.matches("DESC(100|[1-9]\\d?)%")) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Cupom de desconto inválido."
+            );
+        }
+
+        return Integer.parseInt(
+                cupomDesconto.substring(4, cupomDesconto.length() - 1)
+        );
+    }
+
+    private String registrarItem(
+            LinhaCompra linha,
             Usuario usuario
     ) {
+        ItemCompraRequest item = linha.item();
+
         if (!produtoRepository.existsById(item.productId())) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
@@ -182,7 +319,21 @@ public class CompraService {
         assinatura.setProduto(produto);
         assinatura.setPlano(plano);
         assinatura.setQuantidade(item.quantity());
+        assinatura.setValorOriginal(linha.valorOriginal());
+        assinatura.setCupomDesconto(linha.cupomDesconto());
+        assinatura.setValorTotal(linha.valorTotal());
 
         assinaturaRepository.save(assinatura);
+
+        return item.productId();
+    }
+
+    private record LinhaCompra(
+            ItemCompraRequest item,
+            BigDecimal valorOriginal,
+            BigDecimal valorDesconto,
+            BigDecimal valorTotal,
+            String cupomDesconto
+    ) {
     }
 }

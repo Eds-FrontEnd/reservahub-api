@@ -1,4 +1,3 @@
-
 package com.reservahub.api.controller;
 
 import com.reservahub.api.dto.LoginRequest;
@@ -19,13 +18,13 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -151,7 +150,20 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> obterCep(
             Authentication authentication
     ) {
-        Usuario usuario = (Usuario) authentication.getPrincipal();
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "mensagem",
+                            "Usuário não autenticado."
+                    ));
+        }
+
+        String email = authentication.getName();
+
+        Usuario usuario = usuarioService.buscarPorEmail(email);
 
         String cep = usuario.getCep();
 

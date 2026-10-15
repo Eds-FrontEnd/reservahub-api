@@ -1,3 +1,4 @@
+
 package com.reservahub.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -11,8 +12,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
+
 @Entity
-@Table(name = "assinatura", schema = "public")
+@Table(name = "compra_assinatura", schema = "public")
 public class Assinatura {
 
     @Id
@@ -22,6 +25,15 @@ public class Assinatura {
 
     @Column(name = "quantidade", nullable = false)
     private Integer quantidade;
+
+    @Column(name = "valor_original", precision = 10, scale = 2)
+    private BigDecimal valorOriginal;
+
+    @Column(name = "cupom_desconto", length = 20)
+    private String cupomDesconto;
+
+    @Column(name = "valor_total", precision = 10, scale = 2)
+    private BigDecimal valorTotal;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_produto", nullable = false)
@@ -55,6 +67,30 @@ public class Assinatura {
 
     public void setQuantidade(Integer quantidade) {
         this.quantidade = quantidade;
+    }
+
+    public BigDecimal getValorOriginal() {
+        return valorOriginal;
+    }
+
+    public void setValorOriginal(BigDecimal valorOriginal) {
+        this.valorOriginal = valorOriginal;
+    }
+
+    public String getCupomDesconto() {
+        return cupomDesconto;
+    }
+
+    public void setCupomDesconto(String cupomDesconto) {
+        this.cupomDesconto = cupomDesconto;
+    }
+
+    public BigDecimal getValorTotal() {
+        return valorTotal;
+    }
+
+    public void setValorTotal(BigDecimal valorTotal) {
+        this.valorTotal = valorTotal;
     }
 
     public Produto getProduto() {

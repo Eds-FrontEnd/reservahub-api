@@ -17,14 +17,13 @@ public class UsuarioService implements UserDetailsService {
 
     public UsuarioService(
             UsuarioRepository usuarioRepository,
-            PasswordEncoder passwordEncoder) {
-
+            PasswordEncoder passwordEncoder
+    ) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     public Usuario cadastrar(UsuarioCadastro usuarioCadastro) {
-
         if (usuarioRepository.existsByEmail(usuarioCadastro.email())) {
             throw new IllegalArgumentException("E-mail já cadastrado.");
         }
@@ -44,16 +43,19 @@ public class UsuarioService implements UserDetailsService {
         return usuarioRepository.save(usuario);
     }
 
-    @Override
-    public UsuarioAutenticado loadUserByUsername(String email)
-            throws UsernameNotFoundException {
-
-        Usuario usuario = usuarioRepository.findByEmail(email)
+    public Usuario buscarPorEmail(String email) {
+        return usuarioRepository.findByEmail(email)
                 .orElseThrow(() ->
                         new UsernameNotFoundException(
                                 "Usuário não encontrado."
                         )
                 );
+    }
+
+    @Override
+    public UsuarioAutenticado loadUserByUsername(String email)
+            throws UsernameNotFoundException {
+        Usuario usuario = buscarPorEmail(email);
 
         return new UsuarioAutenticado(usuario);
     }
