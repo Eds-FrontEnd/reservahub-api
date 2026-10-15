@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -144,5 +145,24 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("mensagem", exception.getMessage()));
         }
+    }
+
+    @GetMapping("/cep")
+    public ResponseEntity<Map<String, String>> obterCep(
+            Authentication authentication
+    ) {
+        Usuario usuario = (Usuario) authentication.getPrincipal();
+
+        String cep = usuario.getCep();
+
+        if (cep == null || cep.isBlank()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(
+                            "mensagem",
+                            "Nenhum CEP cadastrado para este usuário."
+                    ));
+        }
+
+        return ResponseEntity.ok(Map.of("cep", cep));
     }
 }
