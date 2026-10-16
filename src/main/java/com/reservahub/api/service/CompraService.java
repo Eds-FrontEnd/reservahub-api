@@ -66,21 +66,7 @@ public class CompraService {
     ) {
         validarRequisicao(request);
 
-        if (emailAutenticado == null || emailAutenticado.isBlank()) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
-                    "Não foi possível identificar o usuário autenticado."
-            );
-        }
-
-        String emailNormalizado = emailAutenticado.trim();
-
-        Usuario usuario = usuarioRepository
-                .findByEmailIgnoreCase(emailNormalizado)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        "Usuário autenticado não encontrado."
-                ));
+        Usuario usuario = buscarUsuarioAutenticado(emailAutenticado);
 
         String cupomAplicado = normalizarCupom(request.cupomDesconto());
 
@@ -123,6 +109,47 @@ public class CompraService {
                 "Assinatura realizada com sucesso.",
                 totalItens
         );
+    }
+
+    @Transactional(readOnly = true)
+    public boolean validarCupom(
+            String emailAutenticado,
+            String cupomDesconto
+    ) {
+        Usuario usuario = buscarUsuarioAutenticado(emailAutenticado);
+
+        String cupomNormalizado = normalizarCupom(cupomDesconto);
+
+        if (cupomNormalizado == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Informe um cupom de desconto."
+            );
+        }
+
+        obterPercentualDesconto(cupomNormalizado);
+
+        validarReutilizacaoCupom(usuario, cupomNormalizado);
+
+        return true;
+    }
+
+    private Usuario buscarUsuarioAutenticado(String emailAutenticado) {
+        if (emailAutenticado == null || emailAutenticado.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Não foi possível identificar o usuário autenticado."
+            );
+        }
+
+        String emailNormalizado = emailAutenticado.trim();
+
+        return usuarioRepository
+                .findByEmailIgnoreCase(emailNormalizado)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Usuário autenticado não encontrado."
+                ));
     }
 
     private void validarRequisicao(CompraRequest request) {

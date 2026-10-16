@@ -1,4 +1,3 @@
-
 package com.reservahub.api.config;
 
 import com.reservahub.api.dto.ErrorResponse;
@@ -137,6 +136,9 @@ public class GlobalExceptionHandler {
         } else if ("/api/auth/redefinir-senha".equals(caminho)) {
             mensagem =
                     "Não foi possível redefinir sua senha. Verifique se sua solicitação foi aprovada e continua válida. Se o problema persistir, entre em contato com o suporte.";
+        } else if ("/api/compras/validar-cupom".equals(caminho)) {
+            mensagem =
+                    "Não foi possível validar seu cupom de desconto neste momento. Tente novamente. Se o problema persistir, entre em contato com o suporte.";
         } else {
             mensagem =
                     "Ocorreu um erro inesperado ao processar sua solicitação. Tente novamente mais tarde. Se o problema persistir, entre em contato com o suporte.";
