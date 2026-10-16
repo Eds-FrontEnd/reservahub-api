@@ -11,4 +11,8 @@ public interface AssinaturaRepository extends JpaRepository<Assinatura, Long> {
             Usuario usuario,
             String cupomDesconto
     );
+
+    boolean existsByUsuarioAndCupomDescontoIsNotNull(
+            Usuario usuario
+    );
 }
