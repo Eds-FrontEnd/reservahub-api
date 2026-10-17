@@ -1,4 +1,3 @@
-
 package com.reservahub.api.service;
 
 import java.time.LocalDateTime;
@@ -12,6 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.reservahub.api.model.CupomPromocional;
 import com.reservahub.api.model.Usuario;
+import com.reservahub.api.repository.AssinaturaRepository;
 import com.reservahub.api.repository.CupomPromocionalRepository;
 import com.reservahub.api.repository.UsuarioRepository;
 
@@ -50,13 +50,16 @@ public class CupomPromocionalService {
 
     private final CupomPromocionalRepository cupomRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AssinaturaRepository assinaturaRepository;
 
     public CupomPromocionalService(
             CupomPromocionalRepository cupomRepository,
-            UsuarioRepository usuarioRepository
+            UsuarioRepository usuarioRepository,
+            AssinaturaRepository assinaturaRepository
     ) {
         this.cupomRepository = cupomRepository;
         this.usuarioRepository = usuarioRepository;
+        this.assinaturaRepository = assinaturaRepository;
     }
 
     @Transactional
@@ -69,11 +72,24 @@ public class CupomPromocionalService {
         if (cupomExistente.isPresent()) {
             CupomPromocional cupom = cupomExistente.get();
 
+            boolean utilizado =
+                    assinaturaRepository.existsByUsuarioAndCupomDescontoIgnoreCase(
+                            usuario,
+                            cupom.getCupom()
+                    );
+
+            System.out.println("Cupom promocional - usuário: " + usuario.getId());
+            System.out.println("Cupom promocional - código: " + cupom.getCupom());
+            System.out.println("Cupom promocional - utilizado: " + utilizado);
+
             return new Resultado(
                     false,
+                    utilizado,
                     cupom.getCupom(),
                     cupom.getPercentual(),
-                    "O usuário já possui um cupom promocional."
+                    utilizado
+                            ? "O cupom promocional já foi utilizado."
+                            : "O usuário possui um cupom promocional disponível."
             );
         }
 
@@ -105,6 +121,7 @@ public class CupomPromocionalService {
 
         return new Resultado(
                 true,
+                false,
                 cupomSalvo.getCupom(),
                 cupomSalvo.getPercentual(),
                 "Cupom promocional registrado com sucesso."
@@ -129,6 +146,7 @@ public class CupomPromocionalService {
 
     public record Resultado(
             boolean novo,
+            boolean utilizado,
             String cupom,
             int percentual,
             String mensagem
