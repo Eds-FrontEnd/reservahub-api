@@ -1,4 +1,3 @@
-
 package com.reservahub.api.model;
 
 import jakarta.persistence.Column;
@@ -36,6 +35,9 @@ public class CupomPromocional {
 
     @Column(name = "data_criacao", nullable = false)
     private LocalDateTime dataCriacao;
+
+    @Column(name = "utilizado", nullable = false)
+    private Boolean utilizado = false;
 
     public CupomPromocional() {
     }
@@ -82,5 +84,13 @@ public class CupomPromocional {
 
     public void setDataCriacao(LocalDateTime dataCriacao) {
         this.dataCriacao = dataCriacao;
+    }
+
+    public Boolean getUtilizado() {
+        return utilizado;
+    }
+
+    public void setUtilizado(Boolean utilizado) {
+        this.utilizado = utilizado;
     }
 }

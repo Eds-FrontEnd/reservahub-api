@@ -4,10 +4,12 @@ import com.reservahub.api.dto.CompraRequest;
 import com.reservahub.api.dto.CompraResponse;
 import com.reservahub.api.dto.ItemCompraRequest;
 import com.reservahub.api.model.Assinatura;
+import com.reservahub.api.model.CupomPromocional;
 import com.reservahub.api.model.Plano;
 import com.reservahub.api.model.Produto;
 import com.reservahub.api.model.Usuario;
 import com.reservahub.api.repository.AssinaturaRepository;
+import com.reservahub.api.repository.CupomPromocionalRepository;
 import com.reservahub.api.repository.PlanoRepository;
 import com.reservahub.api.repository.ProdutoSmartphoneRepository;
 import com.reservahub.api.repository.UsuarioRepository;
@@ -25,6 +27,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -40,6 +43,7 @@ public class CompraService {
     );
 
     private final AssinaturaRepository assinaturaRepository;
+    private final CupomPromocionalRepository cupomRepository;
     private final ProdutoSmartphoneRepository produtoRepository;
     private final PlanoRepository planoRepository;
     private final UsuarioRepository usuarioRepository;
@@ -47,12 +51,14 @@ public class CompraService {
 
     public CompraService(
             AssinaturaRepository assinaturaRepository,
+            CupomPromocionalRepository cupomRepository,
             ProdutoSmartphoneRepository produtoRepository,
             PlanoRepository planoRepository,
             UsuarioRepository usuarioRepository,
             EstoqueSseService estoqueSseService
     ) {
         this.assinaturaRepository = assinaturaRepository;
+        this.cupomRepository = cupomRepository;
         this.produtoRepository = produtoRepository;
         this.planoRepository = planoRepository;
         this.usuarioRepository = usuarioRepository;
@@ -70,7 +76,8 @@ public class CompraService {
 
         String cupomAplicado = normalizarCupom(request.cupomDesconto());
 
-        validarReutilizacaoCupom(usuario, cupomAplicado);
+        CupomPromocional cupomPromocional =
+                validarCupomDisponivel(usuario, cupomAplicado);
 
         List<ItemCompraRequest> itens = request.items();
 
@@ -84,6 +91,11 @@ public class CompraService {
         for (LinhaCompra linha : linhas) {
             String idProdutoAtualizado = registrarItem(linha, usuario);
             idsProdutosAtualizados.add(idProdutoAtualizado);
+        }
+
+        if (cupomPromocional != null) {
+            cupomPromocional.setUtilizado(true);
+            cupomRepository.save(cupomPromocional);
         }
 
         if (!idsProdutosAtualizados.isEmpty()) {
@@ -127,11 +139,46 @@ public class CompraService {
             );
         }
 
-        obterPercentualDesconto(cupomNormalizado);
-
-        validarReutilizacaoCupom(usuario, cupomNormalizado);
+        validarCupomDisponivel(usuario, cupomNormalizado);
 
         return true;
+    }
+
+    private CupomPromocional validarCupomDisponivel(
+            Usuario usuario,
+            String cupomDesconto
+    ) {
+        if (cupomDesconto == null) {
+            return null;
+        }
+
+        obterPercentualDesconto(cupomDesconto);
+
+        Optional<CupomPromocional> cupomEncontrado =
+                cupomRepository.findByUsuario(usuario);
+
+        CupomPromocional cupom = cupomEncontrado.orElseThrow(
+                () -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Este cupom não está cadastrado para sua conta."
+                )
+        );
+
+        if (!cupom.getCupom().equalsIgnoreCase(cupomDesconto)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "O cupom informado não corresponde ao seu cupom promocional."
+            );
+        }
+
+        if (Boolean.TRUE.equals(cupom.getUtilizado())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Este cupom já foi utilizado na sua conta."
+            );
+        }
+
+        return cupom;
     }
 
     private Usuario buscarUsuarioAutenticado(String emailAutenticado) {
@@ -182,25 +229,6 @@ public class CompraService {
                         "Produto, quantidade ou plano inválido."
                 );
             }
-        }
-    }
-
-    private void validarReutilizacaoCupom(
-            Usuario usuario,
-            String cupomDesconto
-    ) {
-        if (cupomDesconto == null) {
-            return;
-        }
-
-        if (assinaturaRepository.existsByUsuarioAndCupomDescontoIgnoreCase(
-                usuario,
-                cupomDesconto
-        )) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Este cupom já foi utilizado na sua conta."
-            );
         }
     }
 

@@ -11,7 +11,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.reservahub.api.model.CupomPromocional;
 import com.reservahub.api.model.Usuario;
-import com.reservahub.api.repository.AssinaturaRepository;
 import com.reservahub.api.repository.CupomPromocionalRepository;
 import com.reservahub.api.repository.UsuarioRepository;
 
@@ -50,16 +49,13 @@ public class CupomPromocionalService {
 
     private final CupomPromocionalRepository cupomRepository;
     private final UsuarioRepository usuarioRepository;
-    private final AssinaturaRepository assinaturaRepository;
 
     public CupomPromocionalService(
             CupomPromocionalRepository cupomRepository,
-            UsuarioRepository usuarioRepository,
-            AssinaturaRepository assinaturaRepository
+            UsuarioRepository usuarioRepository
     ) {
         this.cupomRepository = cupomRepository;
         this.usuarioRepository = usuarioRepository;
-        this.assinaturaRepository = assinaturaRepository;
     }
 
     @Transactional
@@ -71,16 +67,7 @@ public class CupomPromocionalService {
 
         if (cupomExistente.isPresent()) {
             CupomPromocional cupom = cupomExistente.get();
-
-            boolean utilizado =
-                    assinaturaRepository.existsByUsuarioAndCupomDescontoIgnoreCase(
-                            usuario,
-                            cupom.getCupom()
-                    );
-
-            System.out.println("Cupom promocional - usuário: " + usuario.getId());
-            System.out.println("Cupom promocional - código: " + cupom.getCupom());
-            System.out.println("Cupom promocional - utilizado: " + utilizado);
+            boolean utilizado = Boolean.TRUE.equals(cupom.getUtilizado());
 
             return new Resultado(
                     false,
@@ -116,6 +103,7 @@ public class CupomPromocionalService {
         cupom.setPercentual(percentual);
         cupom.setCupom("DESC" + percentual + "%");
         cupom.setDataCriacao(LocalDateTime.now());
+        cupom.setUtilizado(false);
 
         CupomPromocional cupomSalvo = cupomRepository.save(cupom);
 
