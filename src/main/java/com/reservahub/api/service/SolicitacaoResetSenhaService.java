@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.springframework.http.MediaType;
@@ -28,12 +29,17 @@ public class SolicitacaoResetSenhaService {
     private static final String MENSAGEM_PADRAO =
             "Se os dados corresponderem a uma conta, a solicitação será analisada pela administração.";
 
+    private static final long SSE_TIMEOUT = 0L;
+
     private final UsuarioRepository usuarioRepository;
     private final SolicitacaoResetSenhaRepository solicitacaoRepository;
     private final PasswordEncoder passwordEncoder;
 
     private final Map<Long, CopyOnWriteArrayList<SseEmitter>> acompanhamentos =
             new ConcurrentHashMap<>();
+
+    private final CopyOnWriteArrayList<SseEmitter> acompanhamentosAdmin =
+            new CopyOnWriteArrayList<>();
 
     public SolicitacaoResetSenhaService(
             UsuarioRepository usuarioRepository,
@@ -54,17 +60,24 @@ public class SolicitacaoResetSenhaService {
                         MENSAGEM_PADRAO
                 ));
 
-        SolicitacaoResetSenha solicitacao =
+        Optional<SolicitacaoResetSenha> existente =
                 solicitacaoRepository
                         .findFirstByUsuario_IdAndStatusAndCodigoUtilizadoEmIsNullOrderByResolvidoEmDesc(
                                 usuario.getId(),
                                 StatusSolicitacaoResetSenha.PENDENTE
-                        )
-                        .orElseGet(() ->
-                                solicitacaoRepository.save(
-                                        new SolicitacaoResetSenha(usuario)
-                                )
                         );
+
+        SolicitacaoResetSenha solicitacao;
+
+        if (existente.isPresent()) {
+            solicitacao = existente.get();
+        } else {
+            solicitacao = solicitacaoRepository.save(
+                    new SolicitacaoResetSenha(usuario)
+            );
+
+            publicarAlteracaoAdminAposCommit();
+        }
 
         return paraResposta(solicitacao);
     }
@@ -96,7 +109,13 @@ public class SolicitacaoResetSenhaService {
             );
         }
 
-        SseEmitter emitter = new SseEmitter(0L);
+        SolicitacaoResetSenha solicitacao =
+                solicitacaoRepository.findById(solicitacaoId)
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Solicitação não encontrada."
+                        ));
+
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
 
         CopyOnWriteArrayList<SseEmitter> conexoes =
                 acompanhamentos.computeIfAbsent(
@@ -121,21 +140,41 @@ public class SolicitacaoResetSenhaService {
 
         synchronized (conexoes) {
             try {
-                SolicitacaoResetSenha solicitacao =
-                        solicitacaoRepository.findById(solicitacaoId)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                        "Solicitação não encontrada."
-                                ));
-
                 conexoes.add(emitter);
                 enviarStatus(emitter, paraStatus(solicitacao));
-            } catch (IllegalArgumentException exception) {
-                remover.run();
-                throw exception;
             } catch (IOException exception) {
                 remover.run();
                 emitter.completeWithError(exception);
             }
+        }
+
+        return emitter;
+    }
+
+    @Transactional(readOnly = true)
+    public SseEmitter acompanharAlteracoesAdmin() {
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
+
+        Runnable remover = () -> acompanhamentosAdmin.remove(emitter);
+
+        emitter.onCompletion(remover);
+        emitter.onTimeout(() -> {
+            remover.run();
+            emitter.complete();
+        });
+        emitter.onError(erro -> remover.run());
+
+        acompanhamentosAdmin.add(emitter);
+
+        try {
+            emitter.send(
+                    SseEmitter.event()
+                            .name("conectado")
+                            .data("conectado", MediaType.TEXT_PLAIN)
+            );
+        } catch (IOException exception) {
+            remover.run();
+            emitter.completeWithError(exception);
         }
 
         return emitter;
@@ -209,6 +248,8 @@ public class SolicitacaoResetSenhaService {
             );
         }
 
+        publicarAlteracaoAdminAposCommit();
+
         return resposta;
     }
 
@@ -261,6 +302,8 @@ public class SolicitacaoResetSenhaService {
         if (statusAnterior != solicitacaoSalva.getStatus()) {
             publicarStatusAposCommit(solicitacaoSalva);
         }
+
+        publicarAlteracaoAdminAposCommit();
     }
 
     private void enviarStatus(
@@ -277,19 +320,28 @@ public class SolicitacaoResetSenhaService {
     private void publicarStatusAposCommit(
             SolicitacaoResetSenha solicitacao
     ) {
-        SolicitacaoResetSenhaStatusResposta status = paraStatus(solicitacao);
+        SolicitacaoResetSenhaStatusResposta status =
+                paraStatus(solicitacao);
 
+        executarAposCommit(() -> publicarStatus(status));
+    }
+
+    private void publicarAlteracaoAdminAposCommit() {
+        executarAposCommit(this::publicarAlteracaoAdmin);
+    }
+
+    private void executarAposCommit(Runnable acao) {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(
                     new TransactionSynchronization() {
                         @Override
                         public void afterCommit() {
-                            publicarStatus(status);
+                            acao.run();
                         }
                     }
             );
         } else {
-            publicarStatus(status);
+            acao.run();
         }
     }
 
@@ -307,7 +359,7 @@ public class SolicitacaoResetSenhaService {
             for (SseEmitter emitter : conexoes) {
                 try {
                     enviarStatus(emitter, status);
-                } catch (IOException exception) {
+                } catch (IOException | IllegalStateException exception) {
                     conexoes.remove(emitter);
                     emitter.completeWithError(exception);
                 }
@@ -315,6 +367,21 @@ public class SolicitacaoResetSenhaService {
 
             if (conexoes.isEmpty()) {
                 acompanhamentos.remove(status.id(), conexoes);
+            }
+        }
+    }
+
+    private void publicarAlteracaoAdmin() {
+        for (SseEmitter emitter : acompanhamentosAdmin) {
+            try {
+                emitter.send(
+                        SseEmitter.event()
+                                .name("alteracao")
+                                .data("atualizacao", MediaType.TEXT_PLAIN)
+                );
+            } catch (IOException | IllegalStateException exception) {
+                acompanhamentosAdmin.remove(emitter);
+                emitter.completeWithError(exception);
             }
         }
     }
