@@ -1,9 +1,10 @@
+
 package com.reservahub.api.service;
 
-import com.reservahub.api.dto.UsuarioCadastro;
 import com.reservahub.api.model.Usuario;
 import com.reservahub.api.repository.UsuarioRepository;
 import com.reservahub.api.security.UsuarioAutenticado;
+import com.reservahub.api.dto.UsuarioCadastro;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,7 +45,7 @@ public class UsuarioService implements UserDetailsService {
     }
 
     public Usuario buscarPorEmail(String email) {
-        return usuarioRepository.findByEmail(email)
+        return usuarioRepository.findByEmailIgnoreCase(email.trim())
                 .orElseThrow(() ->
                         new UsernameNotFoundException(
                                 "Usuário não encontrado."
@@ -53,10 +54,8 @@ public class UsuarioService implements UserDetailsService {
     }
 
     @Override
-    public UsuarioAutenticado loadUserByUsername(String email)
-            throws UsernameNotFoundException {
+    public UsuarioAutenticado loadUserByUsername(String email) {
         Usuario usuario = buscarPorEmail(email);
-
         return new UsuarioAutenticado(usuario);
     }
 }
