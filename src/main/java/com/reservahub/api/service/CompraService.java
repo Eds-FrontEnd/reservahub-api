@@ -99,7 +99,8 @@ public class CompraService {
         }
 
         if (!idsProdutosAtualizados.isEmpty()) {
-            List<String> idsParaNotificar = List.copyOf(idsProdutosAtualizados);
+            List<String> idsParaNotificar =
+                    List.copyOf(idsProdutosAtualizados);
 
             TransactionSynchronizationManager.registerSynchronization(
                     new TransactionSynchronization() {
@@ -251,6 +252,7 @@ public class CompraService {
 
             BigDecimal valorOriginal = plano.getMonthlyPrice()
                     .multiply(BigDecimal.valueOf(item.quantity()))
+                    .multiply(BigDecimal.valueOf(item.planMonths()))
                     .setScale(2, RoundingMode.HALF_UP);
 
             valorOriginalTotal = valorOriginalTotal.add(valorOriginal);
