@@ -1,3 +1,4 @@
+
 package com.reservahub.api.service;
 
 import java.io.IOException;
@@ -49,6 +50,21 @@ public class EstoqueSseService {
                         SseEmitter.event()
                                 .name("estoque-atualizado")
                                 .data(idsUnicos)
+                );
+            } catch (IOException | IllegalStateException erro) {
+                conexoes.remove(emitter);
+                emitter.complete();
+            }
+        }
+    }
+
+    public void notificarCupomAtualizado() {
+        for (SseEmitter emitter : conexoes) {
+            try {
+                emitter.send(
+                        SseEmitter.event()
+                                .name("cupom-atualizado")
+                                .data("atualizado")
                 );
             } catch (IOException | IllegalStateException erro) {
                 conexoes.remove(emitter);

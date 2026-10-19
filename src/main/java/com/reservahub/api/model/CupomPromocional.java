@@ -39,6 +39,9 @@ public class CupomPromocional {
     @Column(name = "utilizado", nullable = false)
     private Boolean utilizado = false;
 
+    @Column(name = "ativo", nullable = false)
+    private Boolean ativo = true;
+
     public CupomPromocional() {
     }
 
@@ -92,5 +95,13 @@ public class CupomPromocional {
 
     public void setUtilizado(Boolean utilizado) {
         this.utilizado = utilizado;
+    }
+
+    public Boolean getAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
     }
 }

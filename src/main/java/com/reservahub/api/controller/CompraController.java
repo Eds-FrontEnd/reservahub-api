@@ -1,7 +1,9 @@
+
 package com.reservahub.api.controller;
 
 import com.reservahub.api.dto.CompraRequest;
 import com.reservahub.api.dto.CompraResponse;
+import com.reservahub.api.model.CupomPromocional;
 import com.reservahub.api.service.CompraService;
 
 import org.springframework.http.HttpStatus;
@@ -61,20 +63,22 @@ public class CompraController {
             );
         }
 
-        compraService.validarCupom(
+        CupomPromocional cupom = compraService.validarCupom(
                 authentication.getName(),
                 request.cupomDesconto()
         );
 
         return new ValidacaoCupomResponse(
                 true,
-                "Cupom aplicado com sucesso."
+                "Cupom aplicado com sucesso.",
+                cupom.getPercentual()
         );
     }
 
     public record ValidacaoCupomResponse(
             boolean valido,
-            String mensagem
+            String mensagem,
+            int percentual
     ) {
     }
 }

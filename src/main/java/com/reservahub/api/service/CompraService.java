@@ -1,3 +1,4 @@
+
 package com.reservahub.api.service;
 
 import com.reservahub.api.dto.CompraRequest;
@@ -13,7 +14,6 @@ import com.reservahub.api.repository.CupomPromocionalRepository;
 import com.reservahub.api.repository.PlanoRepository;
 import com.reservahub.api.repository.ProdutoSmartphoneRepository;
 import com.reservahub.api.repository.UsuarioRepository;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +26,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -35,7 +36,8 @@ public class CompraService {
 
     private static final int MAX_ITENS_POR_COMPRA = 50;
 
-    private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2);
+    private static final BigDecimal ZERO =
+            BigDecimal.ZERO.setScale(2);
 
     private static final Map<Integer, String> PLANOS_POR_PRAZO = Map.of(
             1, "plano-mensal",
@@ -74,16 +76,23 @@ public class CompraService {
 
         Usuario usuario = buscarUsuarioAutenticado(emailAutenticado);
 
-        String cupomAplicado = normalizarCupom(request.cupomDesconto());
+        String cupomAplicado = normalizarCupom(
+                request.cupomDesconto()
+        );
 
         CupomPromocional cupomPromocional =
                 validarCupomDisponivel(usuario, cupomAplicado);
+
+        int percentualDesconto = cupomPromocional == null
+                ? 0
+                : cupomPromocional.getPercentual();
 
         List<ItemCompraRequest> itens = request.items();
 
         List<LinhaCompra> linhas = calcularValores(
                 itens,
-                cupomAplicado
+                cupomAplicado,
+                percentualDesconto
         );
 
         Set<String> idsProdutosAtualizados = new LinkedHashSet<>();
@@ -95,10 +104,13 @@ public class CompraService {
 
         if (cupomPromocional != null) {
             cupomPromocional.setUtilizado(true);
+            cupomPromocional.setAtivo(false);
             cupomRepository.save(cupomPromocional);
         }
 
-        if (!idsProdutosAtualizados.isEmpty()) {
+        boolean cupomFoiAplicado = cupomPromocional != null;
+
+        if (!idsProdutosAtualizados.isEmpty() || cupomFoiAplicado) {
             List<String> idsParaNotificar =
                     List.copyOf(idsProdutosAtualizados);
 
@@ -106,9 +118,15 @@ public class CompraService {
                     new TransactionSynchronization() {
                         @Override
                         public void afterCommit() {
-                            estoqueSseService.notificarEstoqueAtualizado(
-                                    idsParaNotificar
-                            );
+                            if (!idsParaNotificar.isEmpty()) {
+                                estoqueSseService.notificarEstoqueAtualizado(
+                                        idsParaNotificar
+                                );
+                            }
+
+                            if (cupomFoiAplicado) {
+                                estoqueSseService.notificarCupomAtualizado();
+                            }
                         }
                     }
             );
@@ -125,7 +143,7 @@ public class CompraService {
     }
 
     @Transactional(readOnly = true)
-    public boolean validarCupom(
+    public CupomPromocional validarCupom(
             String emailAutenticado,
             String cupomDesconto
     ) {
@@ -140,9 +158,7 @@ public class CompraService {
             );
         }
 
-        validarCupomDisponivel(usuario, cupomNormalizado);
-
-        return true;
+        return validarCupomDisponivel(usuario, cupomNormalizado);
     }
 
     private CupomPromocional validarCupomDisponivel(
@@ -152,8 +168,6 @@ public class CompraService {
         if (cupomDesconto == null) {
             return null;
         }
-
-        obterPercentualDesconto(cupomDesconto);
 
         Optional<CupomPromocional> cupomEncontrado =
                 cupomRepository.findByUsuario(usuario);
@@ -165,10 +179,18 @@ public class CompraService {
                 )
         );
 
-        if (!cupom.getCupom().equalsIgnoreCase(cupomDesconto)) {
+        if (cupom.getCupom() == null
+                || !cupom.getCupom().equalsIgnoreCase(cupomDesconto)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "O cupom informado não corresponde ao seu cupom promocional."
+            );
+        }
+
+        if (!Boolean.TRUE.equals(cupom.getAtivo())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Este cupom promocional está desativado."
             );
         }
 
@@ -179,10 +201,21 @@ public class CompraService {
             );
         }
 
+        Integer percentual = cupom.getPercentual();
+
+        if (percentual == null || percentual < 1 || percentual > 100) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "O percentual cadastrado para este cupom é inválido."
+            );
+        }
+
         return cupom;
     }
 
-    private Usuario buscarUsuarioAutenticado(String emailAutenticado) {
+    private Usuario buscarUsuarioAutenticado(
+            String emailAutenticado
+    ) {
         if (emailAutenticado == null || emailAutenticado.isBlank()) {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
@@ -235,11 +268,11 @@ public class CompraService {
 
     private List<LinhaCompra> calcularValores(
             List<ItemCompraRequest> itens,
-            String cupomDesconto
+            String cupomDesconto,
+            int percentualDesconto
     ) {
         List<LinhaCompra> linhas = new ArrayList<>();
         BigDecimal valorOriginalTotal = ZERO;
-        int percentualDesconto = obterPercentualDesconto(cupomDesconto);
 
         for (ItemCompraRequest item : itens) {
             String idPlano = PLANOS_POR_PRAZO.get(item.planMonths());
@@ -311,24 +344,7 @@ public class CompraService {
             return null;
         }
 
-        return cupomDesconto.trim().toUpperCase();
-    }
-
-    private int obterPercentualDesconto(String cupomDesconto) {
-        if (cupomDesconto == null) {
-            return 0;
-        }
-
-        if (!cupomDesconto.matches("DESC(100|[1-9]\\d?)%")) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Cupom de desconto inválido."
-            );
-        }
-
-        return Integer.parseInt(
-                cupomDesconto.substring(4, cupomDesconto.length() - 1)
-        );
+        return cupomDesconto.trim().toUpperCase(Locale.ROOT);
     }
 
     private String registrarItem(

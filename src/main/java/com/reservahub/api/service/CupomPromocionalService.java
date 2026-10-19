@@ -1,3 +1,4 @@
+
 package com.reservahub.api.service;
 
 import java.time.LocalDateTime;
@@ -59,7 +60,10 @@ public class CupomPromocionalService {
     }
 
     @Transactional
-    public synchronized Resultado emitirCupom(String emailAutenticado, String uf) {
+    public synchronized Resultado emitirCupom(
+            String emailAutenticado,
+            String uf
+    ) {
         Usuario usuario = buscarUsuario(emailAutenticado);
 
         Optional<CupomPromocional> cupomExistente =
@@ -68,13 +72,17 @@ public class CupomPromocionalService {
         if (cupomExistente.isPresent()) {
             CupomPromocional cupom = cupomExistente.get();
             boolean utilizado = Boolean.TRUE.equals(cupom.getUtilizado());
+            boolean ativo = Boolean.TRUE.equals(cupom.getAtivo());
 
             return new Resultado(
                     false,
                     utilizado,
                     cupom.getCupom(),
                     cupom.getPercentual(),
-                    utilizado
+                    ativo,
+                    !ativo
+                            ? "O cupom promocional está desativado."
+                            : utilizado
                             ? "O cupom promocional já foi utilizado."
                             : "O usuário possui um cupom promocional disponível."
             );
@@ -104,6 +112,7 @@ public class CupomPromocionalService {
         cupom.setCupom("DESC" + percentual + "%");
         cupom.setDataCriacao(LocalDateTime.now());
         cupom.setUtilizado(false);
+        cupom.setAtivo(true);
 
         CupomPromocional cupomSalvo = cupomRepository.save(cupom);
 
@@ -112,6 +121,7 @@ public class CupomPromocionalService {
                 false,
                 cupomSalvo.getCupom(),
                 cupomSalvo.getPercentual(),
+                Boolean.TRUE.equals(cupomSalvo.getAtivo()),
                 "Cupom promocional registrado com sucesso."
         );
     }
@@ -137,6 +147,7 @@ public class CupomPromocionalService {
             boolean utilizado,
             String cupom,
             int percentual,
+            boolean ativo,
             String mensagem
     ) {
     }
