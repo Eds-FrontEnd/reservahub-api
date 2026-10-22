@@ -139,6 +139,9 @@ public class GlobalExceptionHandler {
         } else if ("/api/compras/validar-cupom".equals(caminho)) {
             mensagem =
                     "Não foi possível validar seu cupom de desconto neste momento. Tente novamente. Se o problema persistir, entre em contato com o suporte.";
+        } else if (caminho.startsWith("/api/compras")) {
+            mensagem =
+                    "Não foi possível concluir sua compra. A disponibilidade de um ou mais smartphones pode ter mudado enquanto você finalizava o pedido. Confira os itens e as quantidades no carrinho e tente novamente. Se o problema persistir, entre em contato com o suporte.";
         } else {
             mensagem =
                     "Ocorreu um erro inesperado ao processar sua solicitação. Tente novamente mais tarde. Se o problema persistir, entre em contato com o suporte.";

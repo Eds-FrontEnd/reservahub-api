@@ -53,6 +53,16 @@ public class ProdutoSmartphoneController {
         return produtoSmartphoneService.buscarPorNome(nome);
     }
 
+    @GetMapping("/estoque/disponiveis")
+    public List<ProdutoSmartphone> listarDisponiveis() {
+        return produtoSmartphoneService.listarDisponiveis();
+    }
+
+    @GetMapping("/estoque/esgotados")
+    public List<ProdutoSmartphone> listarEsgotados() {
+        return produtoSmartphoneService.listarEsgotados();
+    }
+
     @GetMapping(
             value = "/estoque/eventos",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE
