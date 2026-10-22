@@ -87,7 +87,6 @@ public class ProdutoSmartphoneService {
         return switch (tipoPlano) {
             case MENSAL -> "Mensal";
             case ANUAL -> "Anual";
-            case VINTE_E_QUATRO_MESES -> "24 meses";
         };
     }
 }

@@ -3,8 +3,7 @@ package com.reservahub.api.model;
 public enum TipoPlano {
 
     MENSAL("plano-mensal"),
-    ANUAL("plano-anual"),
-    VINTE_E_QUATRO_MESES("plano-24-meses");
+    ANUAL("plano-anual");
 
     private final String valor;
 
