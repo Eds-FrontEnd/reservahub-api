@@ -1,4 +1,3 @@
-
 package com.reservahub.api.service;
 
 import com.reservahub.api.dto.CompraRequest;
@@ -23,6 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,6 +36,9 @@ import java.util.Set;
 public class CompraService {
 
     private static final int MAX_ITENS_POR_COMPRA = 50;
+
+    private static final ZoneId FUSO_HORARIO_BRASIL =
+            ZoneId.of("America/Sao_Paulo");
 
     private static final BigDecimal ZERO =
             BigDecimal.ZERO.setScale(2);
@@ -95,10 +99,19 @@ public class CompraService {
                 percentualDesconto
         );
 
+        // Todos os itens do mesmo carrinho recebem o mesmo instante.
+        LocalDateTime dataCompra =
+                LocalDateTime.now(FUSO_HORARIO_BRASIL);
+
         Set<String> idsProdutosAtualizados = new LinkedHashSet<>();
 
         for (LinhaCompra linha : linhas) {
-            String idProdutoAtualizado = registrarItem(linha, usuario);
+            String idProdutoAtualizado = registrarItem(
+                    linha,
+                    usuario,
+                    dataCompra
+            );
+
             idsProdutosAtualizados.add(idProdutoAtualizado);
         }
 
@@ -349,7 +362,8 @@ public class CompraService {
 
     private String registrarItem(
             LinhaCompra linha,
-            Usuario usuario
+            Usuario usuario,
+            LocalDateTime dataCompra
     ) {
         ItemCompraRequest item = linha.item();
 
@@ -395,6 +409,7 @@ public class CompraService {
         assinatura.setValorOriginal(linha.valorOriginal());
         assinatura.setCupomDesconto(linha.cupomDesconto());
         assinatura.setValorTotal(linha.valorTotal());
+        assinatura.setDataCompra(dataCompra);
 
         assinaturaRepository.save(assinatura);
 

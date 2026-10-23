@@ -1,4 +1,3 @@
-
 package com.reservahub.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "compra_assinatura", schema = "public")
@@ -34,6 +34,9 @@ public class Assinatura {
 
     @Column(name = "valor_total", precision = 10, scale = 2)
     private BigDecimal valorTotal;
+
+    @Column(name = "data_compra")
+    private LocalDateTime dataCompra;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_produto", nullable = false)
@@ -91,6 +94,14 @@ public class Assinatura {
 
     public void setValorTotal(BigDecimal valorTotal) {
         this.valorTotal = valorTotal;
+    }
+
+    public LocalDateTime getDataCompra() {
+        return dataCompra;
+    }
+
+    public void setDataCompra(LocalDateTime dataCompra) {
+        this.dataCompra = dataCompra;
     }
 
     public Produto getProduto() {

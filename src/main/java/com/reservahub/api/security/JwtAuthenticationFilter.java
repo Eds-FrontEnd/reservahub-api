@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -96,7 +97,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         Usuario usuario = usuarioOptional.get();
-        String perfil = usuario.getPerfil();
+
+        String perfil = usuario.getPerfil() == null
+                ? ""
+                : usuario.getPerfil()
+                .trim()
+                .toUpperCase(Locale.ROOT);
 
         if (!"USER".equals(perfil) && !"ADMIN".equals(perfil)) {
             response.sendError(

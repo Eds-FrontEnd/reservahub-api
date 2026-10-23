@@ -1,3 +1,4 @@
+
 package com.reservahub.api.config;
 
 import com.reservahub.api.security.JwtAuthenticationFilter;
@@ -22,7 +23,8 @@ public class ConfigSecurity {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public ConfigSecurity(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public ConfigSecurity(
+            JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
