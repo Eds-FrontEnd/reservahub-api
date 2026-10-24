@@ -8,9 +8,9 @@ import jakarta.validation.constraints.Pattern;
 
 public record CupomPromocionalEdicaoRequest(
         @NotBlank(message = "Informe o código do cupom.")
-        @Pattern(
-                regexp = "[A-Za-z0-9_-]{3,20}",
-                message = "O código deve conter de 3 a 20 caracteres: letras, números, hífen ou sublinhado."
+       @Pattern(
+        regexp = "^[A-Z0-9_%\\-]{3,20}$",
+        message = "O código deve conter de 3 a 20 caracteres: letras, números, hífen, sublinhado ou percentual."
         )
         String cupom,
 

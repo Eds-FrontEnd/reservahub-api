@@ -1,3 +1,4 @@
+
 package com.reservahub.api.service;
 
 import com.reservahub.api.dto.CupomPromocionalEdicaoRequest;
@@ -206,10 +207,10 @@ public class CupomPromocionalAdminService {
 
         String codigoNormalizado = normalizarCodigo(codigo);
 
-        if (!codigoNormalizado.matches("[A-Z0-9_-]{3,20}")) {
+        if (!codigoNormalizado.matches("[A-Z0-9_%\\-]{3,20}")) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "O código deve conter de 3 a 20 caracteres: letras, números, hífen ou sublinhado."
+                    "O código deve conter de 3 a 20 caracteres: letras, números, hífen, sublinhado ou percentual."
             );
         }
     }
