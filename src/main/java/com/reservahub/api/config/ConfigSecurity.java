@@ -1,7 +1,8 @@
+
 package com.reservahub.api.config;
 
 import com.reservahub.api.security.JwtAuthenticationFilter;
-import java.util.List;
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,6 +17,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 public class ConfigSecurity {
@@ -88,10 +91,18 @@ public class ConfigSecurity {
                         )
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR)
+                        .permitAll()
+
                         .requestMatchers(HttpMethod.OPTIONS, "/**")
                         .permitAll()
+
+                        .requestMatchers("/uploads/products/**")
+                        .permitAll()
+
                         .requestMatchers("/api/admin/**")
                         .hasRole("ADMIN")
+
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/auth/login",
@@ -101,21 +112,25 @@ public class ConfigSecurity {
                                 "/api/contato"
                         )
                         .permitAll()
+
                         .requestMatchers(
                                 HttpMethod.PUT,
                                 "/api/auth/redefinir-senha"
                         )
                         .permitAll()
+
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/auth/solicitacao-reset-senha/*/eventos"
                         )
                         .permitAll()
+
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/auth/solicitacao-reset-senha/**"
                         )
                         .permitAll()
+
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/smartphones",
@@ -123,11 +138,13 @@ public class ConfigSecurity {
                                 "/api/smartphones/estoque/disponiveis"
                         )
                         .permitAll()
+
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/smartphones/estoque/eventos"
                         )
                         .permitAll()
+
                         .anyRequest()
                         .authenticated()
                 )

@@ -1,8 +1,8 @@
+
 package com.reservahub.api.config;
 
 import com.reservahub.api.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -12,6 +12,9 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -27,7 +30,9 @@ public class GlobalExceptionHandler {
                 .getFieldErrors()
                 .stream()
                 .map(error -> error.getDefaultMessage())
-                .filter(mensagem -> mensagem != null && !mensagem.isBlank())
+                .filter(mensagem ->
+                        mensagem != null && !mensagem.isBlank()
+                )
                 .distinct()
                 .collect(Collectors.joining(" "));
 
@@ -49,6 +54,30 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(
                         "Não foi possível interpretar os dados enviados. Confira os campos preenchidos e tente novamente."
                 ));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatusException(
+            ResponseStatusException exception,
+            HttpServletRequest request
+    ) {
+        String mensagem = exception.getReason();
+
+        if (mensagem == null || mensagem.isBlank()) {
+            mensagem = "Não foi possível processar a solicitação.";
+        }
+
+        logger.warn(
+                "Erro HTTP {} na requisição {} {}: {}",
+                exception.getStatusCode().value(),
+                request.getMethod(),
+                request.getRequestURI(),
+                mensagem
+        );
+
+        return ResponseEntity
+                .status(exception.getStatusCode())
+                .body(new ErrorResponse(mensagem));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

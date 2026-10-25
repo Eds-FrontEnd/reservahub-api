@@ -1,4 +1,3 @@
-
 package com.reservahub.api.security;
 
 import com.reservahub.api.model.Usuario;
@@ -42,9 +41,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if ("POST".equalsIgnoreCase(metodo)) {
             return "/api/auth/login".equals(caminho)
+                    || "/api/auth/cadastro".equals(caminho)
                     || "/api/auth/solicitar-reset-senha".equals(caminho)
-                    || "/api/auth/validar-codigo-reset-senha".equals(caminho)
-                    || "/api/usuarios".equals(caminho);
+                    || "/api/usuarios".equals(caminho)
+                    || "/api/contato".equals(caminho);
+        }
+
+        if ("PUT".equalsIgnoreCase(metodo)) {
+            return "/api/auth/redefinir-senha".equals(caminho);
+        }
+
+        if ("GET".equalsIgnoreCase(metodo)) {
+            return "/api/smartphones".equals(caminho)
+                    || "/api/smartphones/buscar".equals(caminho)
+                    || "/api/smartphones/estoque/disponiveis".equals(caminho)
+                    || "/api/smartphones/estoque/eventos".equals(caminho)
+                    || caminho.matches(
+                    "^/api/auth/solicitacao-reset-senha/[^/]+/eventos$"
+            )
+                    || caminho.startsWith(
+                    "/api/auth/solicitacao-reset-senha/"
+            );
         }
 
         return false;
