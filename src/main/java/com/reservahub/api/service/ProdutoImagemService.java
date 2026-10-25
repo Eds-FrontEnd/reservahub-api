@@ -3,10 +3,10 @@ package com.reservahub.api.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatusCode;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -19,6 +19,9 @@ import java.util.Locale;
 public class ProdutoImagemService {
 
     private static final long TAMANHO_MAXIMO = 5L * 1024 * 1024;
+
+    private static final String PREFIXO_IMAGEM = "/uploads/products/";
+    private static final String PREFIXO_IMAGEM_SEM_BARRA = "uploads/products/";
 
     private final Path diretorio;
 
@@ -92,11 +95,70 @@ public class ProdutoImagemService {
                     StandardOpenOption.WRITE
             );
 
-            return "/uploads/products/" + nomeSeguro;
+            return PREFIXO_IMAGEM + nomeSeguro;
         } catch (IOException exception) {
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "Não foi possível armazenar a imagem."
+            );
+        }
+    }
+
+    public void excluir(String caminhoImagem) {
+        if (caminhoImagem == null || caminhoImagem.isBlank()) {
+            return;
+        }
+
+        String caminhoNormalizado = caminhoImagem.trim()
+                .replace('\\', '/');
+
+        if (caminhoNormalizado.startsWith("http://")
+                || caminhoNormalizado.startsWith("https://")) {
+            return;
+        }
+
+        String nomeArquivo;
+
+        if (caminhoNormalizado.startsWith(PREFIXO_IMAGEM)) {
+            nomeArquivo = caminhoNormalizado.substring(
+                    PREFIXO_IMAGEM.length()
+            );
+        } else if (caminhoNormalizado.startsWith(
+                PREFIXO_IMAGEM_SEM_BARRA
+        )) {
+            nomeArquivo = caminhoNormalizado.substring(
+                    PREFIXO_IMAGEM_SEM_BARRA.length()
+            );
+        } else {
+            return;
+        }
+
+        if (nomeArquivo.isBlank()
+                || nomeArquivo.contains("/")
+                || nomeArquivo.equals(".")
+                || nomeArquivo.equals("..")) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "O caminho da imagem é inválido."
+            );
+        }
+
+        Path arquivo = diretorio.resolve(nomeArquivo).normalize();
+
+        if (!arquivo.startsWith(diretorio)
+                || arquivo.equals(diretorio)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "O caminho da imagem é inválido."
+            );
+        }
+
+        try {
+            Files.deleteIfExists(arquivo);
+        } catch (IOException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Não foi possível excluir a imagem do produto."
             );
         }
     }

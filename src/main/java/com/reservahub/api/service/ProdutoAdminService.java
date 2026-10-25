@@ -9,11 +9,15 @@ import com.reservahub.api.model.Produto;
 import com.reservahub.api.model.TipoPlano;
 import com.reservahub.api.repository.PlanoRepository;
 import com.reservahub.api.repository.ProdutoSmartphoneRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.text.Normalizer;
@@ -26,18 +30,24 @@ import java.util.regex.Pattern;
 @Service
 public class ProdutoAdminService {
 
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(ProdutoAdminService.class);
+
     private static final Pattern CARACTERES_INVALIDOS =
             Pattern.compile("[^a-z0-9]+");
 
     private final ProdutoSmartphoneRepository produtoRepository;
     private final PlanoRepository planoRepository;
+    private final ProdutoImagemService produtoImagemService;
 
     public ProdutoAdminService(
             ProdutoSmartphoneRepository produtoRepository,
-            PlanoRepository planoRepository
+            PlanoRepository planoRepository,
+            ProdutoImagemService produtoImagemService
     ) {
         this.produtoRepository = produtoRepository;
         this.planoRepository = planoRepository;
+        this.produtoImagemService = produtoImagemService;
     }
 
     @Transactional(readOnly = true)
@@ -130,7 +140,27 @@ public class ProdutoAdminService {
             );
         }
 
+        String caminhoImagem = produto.getUrlImagem();
+
         produtoRepository.delete(produto);
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            produtoImagemService.excluir(caminhoImagem);
+                        } catch (RuntimeException exception) {
+                            LOGGER.error(
+                                    "O produto {} foi excluído, mas não foi possível excluir sua imagem: {}",
+                                    id,
+                                    caminhoImagem,
+                                    exception
+                            );
+                        }
+                    }
+                }
+        );
     }
 
     private void aplicarDados(
@@ -180,8 +210,7 @@ public class ProdutoAdminService {
                 .replaceAll("\\p{M}", "")
                 .toLowerCase(Locale.ROOT);
 
-        String slug = CARACTERES_INVALIDOS
-                .matcher(normalizado)
+        String slug = CARACTERES_INVALIDOS.matcher(normalizado)
                 .replaceAll("-")
                 .replaceAll("^-|-$", "");
 
@@ -218,10 +247,10 @@ public class ProdutoAdminService {
         if (imageUrl == null || !imageUrl.matches(
                 "^/uploads/products/[a-z0-9-]+\\.(png|jpe?g|webp)$"
         )) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "O caminho da imagem não é válido."
-                );
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "O caminho da imagem não é válido."
+            );
         }
     }
 }
