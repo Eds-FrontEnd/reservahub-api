@@ -1,33 +1,42 @@
+# Documentação
 HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
-### STS ###
-.apt_generated
+# Maven
+target/
+
+# Maven Wrapper
+# Mantém os arquivos necessários do wrapper disponíveis para versionamento.
+# Não ignorar os scripts mvnw e mvnw.cmd nem o diretório .mvn/.
+
+# Spring Tool Suite (STS)
+.apt_generated/
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
-.sts4-cache
+.sts4-cache/
 
-### IntelliJ IDEA ###
-.idea
+# IntelliJ IDEA
+.idea/
 *.iws
 *.iml
 *.ipr
 
-### NetBeans ###
+# NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### VS Code ###
+# Gradle / builds
+build/
+
+# Visual Studio Code
 .vscode/
+
+# Configurações locais
+.env
+.env.*
+!.env.example

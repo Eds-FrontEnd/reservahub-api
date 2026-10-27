@@ -1,0 +1,67 @@
+# ============================================================================
+# DOCKER COMPOSE - AMBIENTE LOCAL (API + POSTGRES)
+# ============================================================================
+# O Dockerfile descreve UMA imagem. O compose orquestra VÁRIOS containers
+# que precisam conversar: aqui, a API e o banco. Com um comando só:
+#
+#   docker compose up --build     → constrói a imagem e sobe tudo
+#   docker compose down            → derruba (os dados do banco ficam)
+#   docker compose down -v         → derruba E apaga os dados do banco
+#
+# Este arquivo é para testar NA SUA MÁQUINA o ambiente do ReservaHub.
+# Em produção, o banco pode ser um serviço gerenciado e a API pode ser
+# construída diretamente do Dockerfile.
+# ============================================================================
+
+services:
+  db:
+    # Imagem oficial do PostgreSQL.
+    image: postgres:17-alpine
+    # As variáveis abaixo inicializam o banco no primeiro boot.
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-digite_aqui_nome_do_seu_banco}
+      POSTGRES_USER: ${POSTGRES_USER:-digite_aqui_seu_usuario}
+      POSTGRES_PASSWORD: "digite_aqui_sua_chave_secreta"
+    # Porta na máquina:porta no container.
+    # Usamos 5433 para evitar conflito com um PostgreSQL local na 5432.
+    ports:
+      - "5433:5432"
+    # Volume persistente: mantém os dados após docker compose down.
+    volumes:
+      - dados-postgres:/var/lib/postgresql/data
+    # Aguarda o PostgreSQL aceitar conexões antes de iniciar a API.
+    healthcheck:
+      test:
+        ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    # Constrói a imagem usando o Dockerfile desta pasta.
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    # Carrega configurações e segredos do arquivo .env.
+    env_file:
+      - .env
+    # Variáveis compatíveis com o application.properties do ReservaHub.
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/digite_aqui_nome_do_banco
+      SPRING_DATASOURCE_USERNAME: "digite_aqui_seu_usuario"
+      SPRING_DATASOURCE_PASSWORD: "digite_aqui_sua_senha"
+      JWT_SECRET: "digite_aqui_sua_chave_secreta"
+      PORT: 8080
+      APP_UPLOAD_DIR: /app/uploads
+    # Mantém a API acessível localmente em http://localhost:8080.
+    ports:
+      - "8080:8080"
+    # Mantém as imagens enviadas mesmo após recriar o container da API.
+    volumes:
+      - ./uploads:/app/uploads
+
+# Volumes persistentes do ReservaHub.
+volumes:
+  dados-postgres:
+  uploads-produtos:
