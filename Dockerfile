@@ -43,8 +43,12 @@ COPY --from=builder --chown=spring:spring \
     /build/target/api-0.0.1-SNAPSHOT.jar app.jar
 
 # Diretório de uploads configurável.
-RUN mkdir -p /app/uploads \
-    && chown spring:spring /app/uploads
+RUN mkdir -p /app/uploads/products \
+    && chown -R spring:spring /app/uploads
+
+# Copia as imagens dos produtos existentes para dentro do contêiner.
+COPY --chown=spring:spring \
+    uploads/products/ /app/uploads/products/
 
 ENV APP_UPLOAD_DIR=/app/uploads
 

@@ -77,7 +77,14 @@ site/
 # ----------------------------------------------------------------------------
 # UPLOADS E DADOS LOCAIS
 # ----------------------------------------------------------------------------
-uploads/
+uploads/*
+!uploads/products/
+uploads/products/*
+!uploads/products/*.webp
+!uploads/products/*.png
+!uploads/products/*.jpg
+!uploads/products/*.jpeg
+
 storage/
 
 # Backups e dumps de banco de dados
