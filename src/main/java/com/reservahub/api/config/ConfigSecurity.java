@@ -3,6 +3,7 @@ package com.reservahub.api.config;
 
 import com.reservahub.api.security.JwtAuthenticationFilter;
 import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,16 +20,20 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 @Configuration
 public class ConfigSecurity {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final String frontEndUrl;
 
     public ConfigSecurity(
-            JwtAuthenticationFilter jwtAuthenticationFilter
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            @Value("${FRONT_END:}") String frontEndUrl
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.frontEndUrl = frontEndUrl;
     }
 
     @Bean
@@ -47,12 +52,15 @@ public class ConfigSecurity {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(
-                List.of(
+        List<String> allowedOrigins = Stream.of(
                         "http://localhost:5173",
-                        "http://localhost:5174"
+                        "http://localhost:5174",
+                        frontEndUrl
                 )
-        );
+                .filter(origin -> origin != null && !origin.isBlank())
+                .toList();
+
+        configuration.setAllowedOrigins(allowedOrigins);
 
         configuration.setAllowedMethods(
                 List.of(
